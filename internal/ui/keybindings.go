@@ -129,7 +129,7 @@ func (v *Views) setupKeyBindings() {
 			}
 			v.App.SetFocus(v.Pages)
 
-			fileName := strings.TrimPrefix(mainText, "🗄️ ")
+			fileName := strings.TrimPrefix(mainText, "🗄️pw ")
 			fileName = strings.TrimPrefix(fileName, "📄 ")
 			fileName = strings.Split(fileName, " (")[0]
 			fileName = strings.TrimSuffix(fileName, "[-]")

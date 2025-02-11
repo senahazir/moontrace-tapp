@@ -120,7 +120,7 @@ func (v *Views) createViews() {
 	placeholder.SetBorderColor(tcell.ColorBlack)
 	instructionView := tview.NewTextView()
 	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary ")
-	instructionView.SetTextColor(tcell.ColorDarkGreen)
+	instructionView.SetTextColor(tcell.ColorDeepPink)
 	v.TopPanel.AddItem(placeholder, 1, 1, false)
 	v.TopPanel.AddItem(traceTextView, 2, 1, false)
 	v.TopPanel.AddItem(instructionView, 7, 1, false)
@@ -166,7 +166,7 @@ func (v *Views) setupPanels() {
 	placeholder.SetBorderColor(tcell.ColorBlack)
 	instructionView := tview.NewTextView()
 	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary ")
-	instructionView.SetTextColor(tcell.ColorDarkGreen)
+	instructionView.SetTextColor(tcell.ColorGreen)
 	v.TopPanel.AddItem(placeholder, 1, 1, false)
 	v.TopPanel.AddItem(v.TraceView, 2, 1, false) // You'll need to store traceView in Views struct
 	v.TopPanel.AddItem(instructionView, 7, 1, false)
