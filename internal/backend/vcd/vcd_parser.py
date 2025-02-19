@@ -42,7 +42,7 @@ def parse_vcd_to_events(vcd_file_path):
             if line.startswith('b'):
                 parts = line.split()
                 if len(parts) == 2:
-                    bin_val = parts[0][1:]  # remove leading 'b'
+                    bin_val = parts[0][1:]  # remember to remove the leading 'b'
                     var_id = parts[1]
                     events.append((current_time, var_id, bin_val))
                 continue
@@ -127,7 +127,7 @@ def analyze_dependencies_possible(changes, edges, time_window=10):
             if driver_sig in descendants_of:
                 possible_descendants = descendants_of[driver_sig]
         
-                # window we're interested is[t..t+time_window]
+                # TODO: remove this timr range or only adjust it to account for 1 clk cycle delays
                 for look_time in range(t, t + time_window + 1):
                     if look_time in changes_by_time:
                         for (dsig, d_old, d_new) in changes_by_time[look_time]:
@@ -152,6 +152,7 @@ def main():
     else:
         vcd_file = "counter_tb.vcd"
 
+    # TODO: update this file path automatically based on users codebase structure 
     dep_json = "dependency_graph.json"
     if not os.path.isfile(dep_json):
         print(f"Error: no '{dep_json}' found.")
@@ -160,7 +161,6 @@ def main():
     with open(dep_json, "r") as f:
         dependency_graph = json.load(f)
 
-   # parses vcd 
     if not os.path.isfile(vcd_file):
         print(f"Error: VCD file '{vcd_file}' not found.")
         sys.exit(1)
@@ -168,8 +168,6 @@ def main():
     events, id_to_signal = parse_vcd_to_events(vcd_file)
     labeled_events = label_events_with_names(events, id_to_signal, dependency_graph)
     changes = compute_signal_changes(labeled_events)
-
-   # perform causal analysis set it to 1 due to clk, double check this
     time_window = 1
     log_messages = analyze_dependencies_possible(changes, dependency_graph, time_window=time_window)
 
