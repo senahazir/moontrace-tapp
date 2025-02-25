@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 import json
 import sys
 import os
+from pathlib import Path
 
 def parse_vcd_to_events(vcd_file_path):
     events = []
@@ -152,8 +153,13 @@ def main():
     else:
         vcd_file = "counter_tb.vcd"
 
+    current_path = Path(__file__).resolve()
+    script_dir = current_path.parent 
+
+
     # TODO: update this file path automatically based on users codebase structure 
-    dep_json = "dependency_graph.json"
+    # dep_json = "dependency_graph.json"
+    dep_json = script_dir / "../../../dependency_graph.json"
     if not os.path.isfile(dep_json):
         print(f"Error: no '{dep_json}' found.")
         sys.exit(1)
