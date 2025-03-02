@@ -63,17 +63,25 @@ func (v *Views) ShowVerificationDialog() {
 	form.SetBackgroundColor(tcell.ColorBlack)
 
 	var moduleName string
-	form.AddInputField("Module Name:", "counter", 20, nil, func(text string) {
+	form.AddInputField("Verification File Name:", "", 40, nil, func(text string) {
 		moduleName = text
 	})
+	form.SetFieldBackgroundColor(tcell.ColorBlack)
+	form.SetLabelColor(tcell.NewHexColor(0x87CEFA))
+	form.SetBorder(true)
+	form.SetFieldTextColor(tcell.ColorAntiqueWhite)
+
 	form.SetLabelColor(tcell.ColorGreen)
 
+	v.App.SetFocus(form)
+
 	var description string
-	form.AddInputField("Design Description:", "", 40, nil, func(text string) {
+
+	descriptionInput := tview.NewInputField().SetLabel("Design Description").SetFieldWidth(100).SetChangedFunc(func(text string) {
 		description = text
 	})
+	form.AddFormItem(descriptionInput)
 
-	// file list creation
 	verificationList := tview.NewList()
 	verificationList.SetMainTextColor(tcell.ColorWhiteSmoke)
 	verificationList.SetSecondaryTextColor(tcell.NewHexColor(0x87CEFA))
@@ -82,6 +90,15 @@ func (v *Views) ShowVerificationDialog() {
 	verificationList.SetBackgroundColor(tcell.ColorBlack)
 
 	v.UpdateFileList(verificationList, v.CurrDir)
+
+	descriptionInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			v.App.SetFocus(verificationList)
+			return nil
+		}
+		return event
+	})
+
 	// todo: makes buttn functional
 	buttonsForm := tview.NewForm()
 	buttonsForm.SetBackgroundColor(tcell.ColorBlack)
@@ -114,6 +131,13 @@ func (v *Views) ShowVerificationDialog() {
 
 	buttonsForm.AddButton("Cancel", func() {
 		v.App.SetRoot(v.MainFlex, true)
+	})
+	verificationList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			v.App.SetFocus(buttonsForm)
+			return nil
+		}
+		return event
 	})
 
 	flex.AddItem(form, 7, 1, true)
