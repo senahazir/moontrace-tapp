@@ -6,6 +6,7 @@ import (
 	"log"
 	"moontrace/ascii"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -49,8 +50,61 @@ func InitializeViews(app *tview.Application) *Views {
 	return v
 }
 
-// view for verification dialog
+func (v *Views) UpdateVerificationFileList(list *tview.List, dir string) {
+	list.Clear()
+	dir = filepath.Clean(dir)
 
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		list.AddItem("❌ Error loading files", "", 0, nil)
+		return
+	}
+
+	if dir != "/" {
+		list.AddItem("🗄️ ..", "", 0, nil)
+	}
+
+	for _, file := range files {
+		if file.Name() == "." || file.Name() == ".." {
+			continue
+		}
+
+		fileInfo, err := file.Info()
+		if err != nil {
+			continue
+		}
+
+		fileName := file.Name()
+		prefix := "📄 "
+		if file.IsDir() {
+			prefix = "🗄️ "
+			list.AddItem(prefix+fileName, "", 0, nil)
+			continue
+		}
+
+		size := fileInfo.Size()
+		sizeStr := ""
+		switch {
+		case size < 1024:
+			sizeStr = fmt.Sprintf("%d B", size)
+		case size < 1024*1024:
+			sizeStr = fmt.Sprintf("%.1f KB", float64(size)/1024)
+		default:
+			sizeStr = fmt.Sprintf("%.1f MB", float64(size)/(1024*1024))
+		}
+
+		fullPath := filepath.Join(dir, fileName)
+		displayName := fmt.Sprintf("%s%s (%s)", prefix, fileName, sizeStr)
+
+		if v.UploadedFiles[fullPath] {
+			displayName = fmt.Sprintf("%s%s (%s) ✓", prefix, fileName, sizeStr)
+		}
+
+		list.AddItem(displayName, "", 0, nil)
+	}
+}
+
+// view for verification dialog
 func (v *Views) ShowVerificationDialog() {
 	// Create main layout
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)
@@ -89,7 +143,7 @@ func (v *Views) ShowVerificationDialog() {
 	verificationList.SetTitle("Select Files for Verification")
 	verificationList.SetBackgroundColor(tcell.ColorBlack)
 
-	v.UpdateFileList(verificationList, v.CurrDir)
+	v.UpdateVerificationFileList(verificationList, v.CurrDir)
 
 	descriptionInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
@@ -97,6 +151,30 @@ func (v *Views) ShowVerificationDialog() {
 			return nil
 		}
 		return event
+	})
+	verificationList.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
+		fileName := strings.TrimPrefix(mainText, "🗄️ ")
+		fileName = strings.TrimPrefix(fileName, "📄 ")
+		fileName = strings.Split(fileName, " (")[0]
+
+		fullPath := filepath.Join(v.CurrDir, fileName)
+		fileInfo, err := os.Stat(fullPath)
+
+		if err == nil && !fileInfo.IsDir() {
+			// Toggle selection
+			v.UploadedFiles[fullPath] = !v.UploadedFiles[fullPath]
+			v.UpdateVerificationFileList(verificationList, v.CurrDir)
+		} else if err == nil && fileInfo.IsDir() && fileName != ".." {
+			// Navigate into directory
+			v.CurrDir = fullPath
+			v.UpdateVerificationFileList(verificationList, v.CurrDir)
+		} else if fileName == ".." {
+			// Navigate up one level
+			if v.CurrDir != "/" {
+				v.CurrDir = filepath.Dir(v.CurrDir)
+				v.UpdateVerificationFileList(verificationList, v.CurrDir)
+			}
+		}
 	})
 
 	// todo: makes buttn functional
@@ -111,7 +189,7 @@ func (v *Views) ShowVerificationDialog() {
 			if strings.Contains(text, "✓") {
 				parts := strings.SplitN(text, " ", 3)
 				if len(parts) >= 3 {
-					selectedFiles = append(selectedFiles, parts[2])
+					selectedFiles = append(selectedFiles, parts[1])
 				}
 			}
 		}
@@ -137,6 +215,37 @@ func (v *Views) ShowVerificationDialog() {
 			v.App.SetFocus(buttonsForm)
 			return nil
 		}
+
+		currentIndex := verificationList.GetCurrentItem()
+		if currentIndex < 0 {
+			return event
+		}
+
+		mainText, _ := verificationList.GetItemText(currentIndex)
+
+		switch event.Key() {
+		case tcell.KeyLeft:
+			if v.CurrDir != "/" {
+				v.CurrDir = filepath.Dir(v.CurrDir)
+				v.UpdateVerificationFileList(verificationList, v.CurrDir)
+			}
+			return nil
+
+		case tcell.KeyRight:
+			fileName := strings.TrimPrefix(mainText, "🗄️ ")
+			fileName = strings.TrimPrefix(fileName, "📄 ")
+			fileName = strings.Split(fileName, " (")[0]
+
+			fullPath := filepath.Join(v.CurrDir, fileName)
+			fileInfo, err := os.Stat(fullPath)
+
+			if err == nil && fileInfo.IsDir() {
+				v.CurrDir = fullPath
+				v.UpdateVerificationFileList(verificationList, v.CurrDir)
+			}
+			return nil
+		}
+
 		return event
 	})
 
