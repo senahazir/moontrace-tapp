@@ -2,9 +2,11 @@
 package ui
 
 import (
+	"fmt"
 	"log"
 	"moontrace/ascii"
 	"os"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -33,7 +35,7 @@ func InitializeViews(app *tview.Application) *Views {
 	v := &Views{
 		App:           app,
 		UploadedFiles: make(map[string]bool),
-		CurrDir:       "/Users/senagulhazir/Desktop/counter/counter",
+		CurrDir:       "/Users/senagulhazir/Desktop/demo/counter",
 	}
 
 	f, _ := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -47,6 +49,78 @@ func InitializeViews(app *tview.Application) *Views {
 	return v
 }
 
+// view for verification dialog
+
+func (v *Views) ShowVerificationDialog() {
+	// Create main layout
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.SetBorder(true)
+	flex.SetTitle("Generate Verification")
+	flex.SetBorderColor(tcell.NewHexColor(0x87CEFA))
+	flex.SetBackgroundColor(tcell.ColorBlack)
+
+	form := tview.NewForm()
+	form.SetBackgroundColor(tcell.ColorBlack)
+
+	var moduleName string
+	form.AddInputField("Module Name:", "counter", 20, nil, func(text string) {
+		moduleName = text
+	})
+	form.SetLabelColor(tcell.ColorGreen)
+
+	var description string
+	form.AddInputField("Design Description:", "", 40, nil, func(text string) {
+		description = text
+	})
+
+	// file list creation
+	verificationList := tview.NewList()
+	verificationList.SetMainTextColor(tcell.ColorWhiteSmoke)
+	verificationList.SetSecondaryTextColor(tcell.NewHexColor(0x87CEFA))
+	verificationList.SetBorder(true)
+	verificationList.SetTitle("Select Files for Verification")
+	verificationList.SetBackgroundColor(tcell.ColorBlack)
+
+	v.UpdateFileList(verificationList, v.CurrDir)
+	// todo: makes buttn functional
+	buttonsForm := tview.NewForm()
+	buttonsForm.SetBackgroundColor(tcell.ColorBlack)
+	buttonsForm.SetButtonsAlign(tview.AlignCenter)
+
+	buttonsForm.AddButton("Generate", func() {
+		var selectedFiles []string
+		for i := 0; i < verificationList.GetItemCount(); i++ {
+			text, _ := verificationList.GetItemText(i)
+			if strings.Contains(text, "✓") {
+				parts := strings.SplitN(text, " ", 3)
+				if len(parts) >= 3 {
+					selectedFiles = append(selectedFiles, parts[2])
+				}
+			}
+		}
+
+		message := fmt.Sprintf("Verification setup:\n"+
+			"Module: %s\n"+
+			"Description: %s\n"+
+			"Selected Files: %s",
+			moduleName,
+			description,
+			strings.Join(selectedFiles, ", "))
+
+		v.Response.SetText(message)
+		v.Pages.SwitchToPage("response")
+		v.App.SetRoot(v.MainFlex, true)
+	})
+
+	buttonsForm.AddButton("Cancel", func() {
+		v.App.SetRoot(v.MainFlex, true)
+	})
+
+	flex.AddItem(form, 7, 1, true)
+	flex.AddItem(verificationList, 0, 3, false)
+	flex.AddItem(buttonsForm, 3, 1, false)
+	v.App.SetRoot(flex, true)
+}
 func (v *Views) createViews() {
 	// Create ASCII view
 	moon_ascii := ascii.ConvertImage("/Users/senagulhazir/Desktop/terminal_app/tviewapp/moon.png")
