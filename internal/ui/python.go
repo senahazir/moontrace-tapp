@@ -8,14 +8,27 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (v *Views) StreamPythonScript(prompt string, app *tview.Application) {
+func (v *Views) StreamPythonScript(prompt string, app *tview.Application, verification bool, fileName string, description string) {
 	var selectedFiles []string
 	for filePath, isSelected := range v.UploadedFiles {
 		if isSelected {
 			selectedFiles = append(selectedFiles, filePath)
 		}
 	}
-	args := append([]string{"/Users/senagulhazir/Desktop/counter/app.py", prompt}, selectedFiles...)
+	// args := append([]string{"/Users/senagulhazir/Desktop/demo/moontrace/app/app.py", prompt}, selectedFiles...)
+	args := []string{"/Users/senagulhazir/Desktop/demo/moontrace/app/app.py", prompt}
+	if verification {
+		args = append(args, "--verification")
+	}
+
+	if fileName != "" {
+		args = append(args, "--fileName", fileName)
+	}
+	if description != "" {
+		args = append(args, "--description", description)
+	}
+	args = append(args, selectedFiles...)
+
 	cmd := exec.Command("python3", args...)
 
 	stdout, err := cmd.StdoutPipe()
@@ -43,6 +56,7 @@ func (v *Views) StreamPythonScript(prompt string, app *tview.Application) {
 			v.Response.SetText(responseBuffer)
 		})
 	}
+	v.UpdateFileList(v.List, v.CurrDir)
 	cmd.Wait()
 
 	app.QueueUpdateDraw(func() {

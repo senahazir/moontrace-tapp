@@ -131,7 +131,7 @@ func (v *Views) ShowVerificationDialog() {
 
 	var description string
 
-	descriptionInput := tview.NewInputField().SetLabel("Design Description").SetFieldWidth(100).SetChangedFunc(func(text string) {
+	descriptionInput := tview.NewInputField().SetLabel("Design Description:").SetFieldWidth(100).SetChangedFunc(func(text string) {
 		description = text
 	})
 	form.AddFormItem(descriptionInput)
@@ -184,27 +184,33 @@ func (v *Views) ShowVerificationDialog() {
 
 	buttonsForm.AddButton("Generate", func() {
 		var selectedFiles []string
-		for i := 0; i < verificationList.GetItemCount(); i++ {
-			text, _ := verificationList.GetItemText(i)
-			if strings.Contains(text, "✓") {
-				parts := strings.SplitN(text, " ", 3)
-				if len(parts) >= 3 {
-					selectedFiles = append(selectedFiles, parts[1])
-				}
+		for filePath, isSelected := range v.UploadedFiles {
+			if isSelected {
+				selectedFiles = append(selectedFiles, filePath)
 			}
 		}
+		fileName := moduleName
+		if fileName == "" {
+			fileName = "verification_tb.cpp"
+		} else if !strings.HasSuffix(fileName, "cpp") {
+			fileName += ".cpp"
+		}
 
-		message := fmt.Sprintf("Verification setup:\n"+
+		message := fmt.Sprintf("Generating verification testbench...\n"+
 			"Module: %s\n"+
 			"Description: %s\n"+
-			"Selected Files: %s",
-			moduleName,
+			"Selected Files: %d",
+			fileName,
 			description,
-			strings.Join(selectedFiles, ", "))
+			len(selectedFiles))
 
 		v.Response.SetText(message)
+		// change the message to a json object that can help generate a verification file
 		v.Pages.SwitchToPage("response")
 		v.App.SetRoot(v.MainFlex, true)
+		prompt := "Generate a comprehensive verification testbench for this hardware design."
+		go v.StreamPythonScript(prompt, v.App, true, fileName, description)
+
 	})
 
 	buttonsForm.AddButton("Cancel", func() {
@@ -215,14 +221,11 @@ func (v *Views) ShowVerificationDialog() {
 			v.App.SetFocus(buttonsForm)
 			return nil
 		}
-
 		currentIndex := verificationList.GetCurrentItem()
 		if currentIndex < 0 {
 			return event
 		}
-
 		mainText, _ := verificationList.GetItemText(currentIndex)
-
 		switch event.Key() {
 		case tcell.KeyLeft:
 			if v.CurrDir != "/" {
@@ -248,6 +251,14 @@ func (v *Views) ShowVerificationDialog() {
 
 		return event
 	})
+
+	// buttonsForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	// 	if event.Key() == tcell.KeyTab {
+	// 		v.App.SetFocus(buttonsForm)
+	// 		return nil
+	// 	}
+	// 	return event
+	// })
 
 	flex.AddItem(form, 7, 1, true)
 	flex.AddItem(verificationList, 0, 3, false)
@@ -326,7 +337,7 @@ func (v *Views) createViews() {
 	placeholder := tview.NewTextView()
 	placeholder.SetBorderColor(tcell.ColorBlack)
 	instructionView := tview.NewTextView()
-	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary ")
+	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary\n CtrlG/CtrlB:  ")
 	instructionView.SetTextColor(tcell.ColorDeepPink)
 	v.TopPanel.AddItem(placeholder, 1, 1, false)
 	v.TopPanel.AddItem(traceTextView, 2, 1, false)
@@ -372,10 +383,10 @@ func (v *Views) setupPanels() {
 	placeholder := tview.NewTextView()
 	placeholder.SetBorderColor(tcell.ColorBlack)
 	instructionView := tview.NewTextView()
-	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary ")
+	instructionView.SetText(" CtrlP : Switch Response/File pages\n Tab   : Switch between panels\n CtrlC : Exit \n ->    : View file content \n <-    : Parent dictionary\n CtrlG : Verification Page\n CtrlB : Back Page  ")
 	instructionView.SetTextColor(tcell.ColorGreen)
 	v.TopPanel.AddItem(placeholder, 1, 1, false)
-	v.TopPanel.AddItem(v.TraceView, 2, 1, false) // You'll need to store traceView in Views struct
+	v.TopPanel.AddItem(v.TraceView, 2, 1, false)
 	v.TopPanel.AddItem(instructionView, 7, 1, false)
 	v.TopPanel.SetBackgroundColor(tcell.ColorBlack)
 

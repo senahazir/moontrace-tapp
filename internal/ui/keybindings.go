@@ -10,9 +10,14 @@ import (
 )
 
 func (v *Views) setupKeyBindings() {
-	// App-wide key bindings
+	// whole app key bindings
 	v.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyCtrlG:
+			v.ShowVerificationDialog()
+			return nil
+		case tcell.KeyCtrlB:
+			v.App.SetRoot(v.MainFlex, true)
 		case tcell.KeyCtrlC:
 			v.App.Stop()
 			return nil
@@ -34,7 +39,7 @@ func (v *Views) setupKeyBindings() {
 			v.HistoryIndex = len(v.InputHistory)
 			v.UserInput.SetText("")
 			go func() {
-				v.StreamPythonScript(prompt, v.App)
+				v.StreamPythonScript(prompt, v.App, false, "", "")
 			}()
 		}
 	})
@@ -113,7 +118,7 @@ func (v *Views) setupKeyBindings() {
 		case tcell.KeyEnter:
 			fileName := strings.TrimPrefix(mainText, "🗄️ ")
 			fileName = strings.TrimPrefix(fileName, "📄 ")
-			fileName = strings.Split(fileName, " (")[0] // Remove size info
+			fileName = strings.Split(fileName, " (")[0]
 
 			fullPath := filepath.Join(v.CurrDir, fileName)
 			fileInfo, err := os.Stat(fullPath)
@@ -129,7 +134,7 @@ func (v *Views) setupKeyBindings() {
 			}
 			v.App.SetFocus(v.Pages)
 
-			fileName := strings.TrimPrefix(mainText, "🗄️pw ")
+			fileName := strings.TrimPrefix(mainText, "🗄️ ")
 			fileName = strings.TrimPrefix(fileName, "📄 ")
 			fileName = strings.Split(fileName, " (")[0]
 			fileName = strings.TrimSuffix(fileName, "[-]")
